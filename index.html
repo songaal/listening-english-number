@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Number Listening</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap">
+  <style>
+    :root {
+      --bg:        #0B0D16;
+      --surface:   #13161F;
+      --surface2:  #191D2A;
+      --surface3:  #1E2233;
+      --border:    rgba(255,255,255,0.07);
+      --text:      #D8E0F0;
+      --sub:       #758094;
+      --muted:     #364158;
+      --accent:    #5B9BFF;
+      --accent-bg: rgba(91,155,255,0.10);
+      --accent-br: rgba(91,155,255,0.22);
+      --speak:     #A78BFA;
+      --speak-bg:  rgba(167,139,250,0.10);
+      --speak-br:  rgba(167,139,250,0.22);
+      --r: 13px;
+      --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+      --font-ui:   'Inter', system-ui, sans-serif;
+    }
+    @media (prefers-color-scheme: light) {
+      :root:not([data-theme="dark"]) {
+        --bg:        #EEF1F9;
+        --surface:   #FFFFFF;
+        --surface2:  #F2F5FC;
+        --surface3:  #E8EDF7;
+        --border:    rgba(0,0,0,0.07);
+        --text:      #111827;
+        --sub:       #4D5A78;
+        --muted:     #B0BAD0;
+        --accent:    #2660E8;
+        --accent-bg: rgba(38,96,232,0.08);
+        --accent-br: rgba(38,96,232,0.22);
+        --speak:     #7C3AED;
+        --speak-bg:  rgba(124,58,237,0.08);
+        --speak-br:  rgba(124,58,237,0.22);
+      }
+    }
+    :root[data-theme="dark"] {
+      --bg:        #0B0D16;
+      --surface:   #13161F;
+      --surface2:  #191D2A;
+      --surface3:  #1E2233;
+      --border:    rgba(255,255,255,0.07);
+      --text:      #D8E0F0;
+      --sub:       #758094;
+      --muted:     #364158;
+      --accent:    #5B9BFF;
+      --accent-bg: rgba(91,155,255,0.10);
+      --accent-br: rgba(91,155,255,0.22);
+      --speak:     #A78BFA;
+      --speak-bg:  rgba(167,139,250,0.10);
+      --speak-br:  rgba(167,139,250,0.22);
+    }
+    :root[data-theme="light"] {
+      --bg:        #EEF1F9;
+      --surface:   #FFFFFF;
+      --surface2:  #F2F5FC;
+      --surface3:  #E8EDF7;
+      --border:    rgba(0,0,0,0.07);
+      --text:      #111827;
+      --sub:       #4D5A78;
+      --muted:     #B0BAD0;
+      --accent:    #2660E8;
+      --accent-bg: rgba(38,96,232,0.08);
+      --accent-br: rgba(38,96,232,0.22);
+      --speak:     #7C3AED;
+      --speak-bg:  rgba(124,58,237,0.08);
+      --speak-br:  rgba(124,58,237,0.22);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-ui);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding-inline: 16px;
+      padding-block: 24px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-inline: 2px;
+    }
+    .header-title {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--sub);
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .theme-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--sub);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .theme-btn:hover { background: var(--surface2); color: var(--text); }
+    .count-pill {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--muted);
+      background: var(--surface2);
+      padding: 3px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      transition: color 0.3s, border-color 0.3s;
+      letter-spacing: 0.03em;
+    }
+    .count-pill.live { color: var(--accent); border-color: var(--accent-br); }
+
+    /* Display card */
+    .display-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 36px 24px 28px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.4s;
+    }
+    .display-card.speaking { border-color: var(--speak-br); }
+
+    .glow {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(ellipse 60% 50% at 50% 0%, var(--speak-bg), transparent);
+      opacity: 0;
+      transition: opacity 0.5s;
+    }
+    .display-card.speaking .glow { opacity: 1; }
+
+    .number-wrap {
+      font-family: var(--font-mono);
+      font-size: clamp(72px, 20vw, 104px);
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums;
+      min-height: 104px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text);
+      transition: color 0.3s;
+      position: relative;
+      z-index: 1;
+      user-select: none;
+    }
+    .number-wrap.speaking { color: var(--speak); }
+    .number-wrap.veiled {
+      color: transparent;
+      text-shadow: 0 0 28px var(--muted);
+    }
+
+    .word-line {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--sub);
+      margin-top: 10px;
+      min-height: 20px;
+      letter-spacing: 0.01em;
+      position: relative;
+      z-index: 1;
+      transition: opacity 0.2s;
+    }
+    .word-line.hidden { opacity: 0; }
+
+    /* Status + progress */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 20px;
+      position: relative;
+      z-index: 1;
+    }
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .dot.speaking {
+      background: var(--speak);
+      animation: blink 1s ease-in-out infinite;
+    }
+    .dot.waiting { background: var(--accent); animation: none; }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+    .status-text {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--sub);
+      flex: 1;
+    }
+    .time-left {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.03em;
+    }
+
+    .progress-track {
+      height: 2px;
+      background: var(--surface3);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 10px;
+      position: relative;
+      z-index: 1;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: background 0.3s;
+    }
+    .progress-fill.speak-mode { background: var(--speak); }
+
+    /* Buttons */
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 8px;
+    }
+    .btn {
+      font-family: var(--font-ui);
+      font-size: 14px;
+      font-weight: 600;
+      padding: 11px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--sub);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: background 0.15s, color 0.15s, transform 0.1s;
+    }
+    .btn:hover:not(:disabled) { background: var(--surface2); color: var(--text); }
+    .btn:active:not(:disabled) { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.3; cursor: default; }
+    .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .btn-play {
+      background: var(--accent-bg);
+      color: var(--accent);
+      border-color: var(--accent-br);
+    }
+    .btn-play:hover:not(:disabled) { background: rgba(91,155,255,0.18); color: var(--accent); }
+    .btn-play.stop-mode {
+      background: var(--speak-bg);
+      color: var(--speak);
+      border-color: var(--speak-br);
+    }
+    .btn-play.stop-mode:hover:not(:disabled) {
+      background: rgba(167,139,250,0.18);
+      color: var(--speak);
+    }
+
+    /* Settings */
+    .settings {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .field-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .range-pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .sub-field { display: flex; flex-direction: column; gap: 4px; }
+    .sub-label { font-size: 11px; color: var(--muted); }
+
+    input[type="number"] {
+      width: 100%;
+      padding: 8px 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 14px;
+      -moz-appearance: textfield;
+      transition: border-color 0.15s;
+    }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+    input[type="number"]:focus { outline: none; border-color: var(--accent); }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 4px;
+      background: var(--surface3);
+      border-radius: 2px;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+    input[type="range"]::-moz-range-thumb {
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: none;
+    }
+    input[type="range"]:focus { outline: none; }
+    .slider-val {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--sub);
+      min-width: 34px;
+      text-align: right;
+    }
+
+    /* Toggle */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .toggle-label { font-size: 13px; color: var(--sub); font-weight: 500; }
+    .toggle {
+      position: relative; width: 36px; height: 20px; cursor: pointer;
+      display: block; flex-shrink: 0;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .t-track {
+      position: absolute; inset: 0;
+      background: var(--surface3);
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .t-thumb {
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: transform 0.2s, background 0.2s;
+    }
+    .toggle input:checked ~ .t-track { background: var(--accent-bg); border-color: var(--accent-br); }
+    .toggle input:checked ~ .t-thumb { transform: translateX(16px); background: var(--accent); }
+    .toggle input:focus-visible ~ .t-track { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .divider { height: 1px; background: var(--border); margin-inline: -20px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <span class="header-title">Number Listening</span>
+    <div class="header-right">
+      <span class="count-pill" id="countPill">0 played</span>
+      <button class="theme-btn" id="themeBtn" title="테마 전환" onclick="toggleTheme()">🌙</button>
+    </div>
+  </div>
+
+  <!-- Display -->
+  <div class="display-card" id="displayCard">
+    <div class="glow"></div>
+    <div class="number-wrap" id="numDisplay">--</div>
+    <div class="word-line hidden" id="wordDisplay"></div>
+
+    <div class="status-bar">
+      <div class="dot" id="statusDot"></div>
+      <span class="status-text" id="statusText">대기 중</span>
+      <span class="time-left" id="timeLeft"></span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+  </div>
+
+  <!-- Buttons -->
+  <div class="btn-row">
+    <button class="btn" id="repeatBtn" onclick="repeatCurrent()" disabled>
+      ↺ 다시 듣기
+    </button>
+    <button class="btn btn-play" id="playBtn" onclick="togglePlay()">
+      ▶ 시작하기
+    </button>
+  </div>
+
+  <!-- Settings -->
+  <div class="settings">
+    <div class="field">
+      <div class="field-label">숫자 범위</div>
+      <div class="range-pair">
+        <div class="sub-field">
+          <span class="sub-label">최솟값</span>
+          <input type="number" id="minNum" value="10" min="0">
+        </div>
+        <div class="sub-field">
+          <span class="sub-label">최댓값</span>
+          <input type="number" id="maxNum" value="150" min="1">
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="field">
+      <div class="field-label">대기 시간</div>
+      <div class="slider-row">
+        <input type="range" id="intervalSlider" min="0.5" max="8" step="0.5" value="2"
+               oninput="updateSlider('interval')">
+        <span class="slider-val" id="intervalVal">2.0s</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="field-label">말하기 속도</div>
+      <div class="slider-row">
+        <input type="range" id="rateSlider" min="0.5" max="1.5" step="0.1" value="1.0"
+               oninput="updateSlider('rate')">
+        <span class="slider-val" id="rateVal">1.0×</span>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="toggle-row">
+      <span class="toggle-label">영어 단어 보기</span>
+      <label class="toggle">
+        <input type="checkbox" id="showWords" onchange="updateOptions()">
+        <div class="t-track"></div>
+        <div class="t-thumb"></div>
+      </label>
+    </div>
+
+    <div class="toggle-row">
+      <span class="toggle-label">숫자 가리기 (먼저 듣기)</span>
+      <label class="toggle">
+        <input type="checkbox" id="veilNum" onchange="updateOptions()">
+        <div class="t-track"></div>
+        <div class="t-thumb"></div>
+      </label>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ── State ──────────────────────────────────────────────
+  let isPlaying = false;
+  let isSpeaking = false;
+  let currentNum = null;
+  let playCount = 0;
+  let countdownTimer = null;
+  let rafId = null;
+  let countdownStart = 0;
+  let countdownDuration = 0;
+  let currentTheme = 'auto'; // auto | dark | light
+
+  const synth = window.speechSynthesis;
+
+  // Chrome speechSynthesis bug: stops after ~15 utterances
+  // Keep it alive with a periodic resume
+  setInterval(() => {
+    if (synth.speaking) { synth.pause(); synth.resume(); }
+  }, 10000);
+
+  // ── Number → Words ─────────────────────────────────────
+  const ONES = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven',
+                'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen',
+                'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+  const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty',
+                'sixty', 'seventy', 'eighty', 'ninety'];
+
+  function toWords(n) {
+    if (n === 0) return 'zero';
+    if (n < 0) return 'negative ' + toWords(-n);
+    if (n < 20) return ONES[n];
+    if (n < 100) return TENS[Math.floor(n / 10)] + (n % 10 ? '-' + ONES[n % 10] : '');
+    if (n < 1000) {
+      const r = n % 100;
+      return ONES[Math.floor(n / 100)] + ' hundred' + (r ? ' ' + toWords(r) : '');
+    }
+    if (n < 1000000) {
+      const t = Math.floor(n / 1000), r = n % 1000;
+      return toWords(t) + ' thousand' + (r ? ' ' + toWords(r) : '');
+    }
+    return n.toString();
+  }
+
+  // ── DOM refs ───────────────────────────────────────────
+  const $card = document.getElementById('displayCard');
+  const $num  = document.getElementById('numDisplay');
+  const $word = document.getElementById('wordDisplay');
+  const $dot  = document.getElementById('statusDot');
+  const $txt  = document.getElementById('statusText');
+  const $time = document.getElementById('timeLeft');
+  const $fill = document.getElementById('progressFill');
+  const $play = document.getElementById('playBtn');
+  const $rep  = document.getElementById('repeatBtn');
+  const $pill = document.getElementById('countPill');
+
+  // ── Core logic ─────────────────────────────────────────
+  function getSettings() {
+    const min      = parseInt(document.getElementById('minNum').value) || 1;
+    const max      = parseInt(document.getElementById('maxNum').value) || 100;
+    const interval = parseFloat(document.getElementById('intervalSlider').value) * 1000 || 2000;
+    const rate     = parseFloat(document.getElementById('rateSlider').value) || 1.0;
+    const showWords = document.getElementById('showWords').checked;
+    const veilNum   = document.getElementById('veilNum').checked;
+    return { min, max, interval, rate, showWords, veilNum };
+  }
+
+  function setStatus(state) {
+    $dot.className = 'dot ' + state;
+    if (state === 'speaking') {
+      $txt.textContent = '발음 중';
+      $card.classList.add('speaking');
+      $num.classList.add('speaking');
+      $fill.classList.add('speak-mode');
+    } else if (state === 'waiting') {
+      $txt.textContent = '다음 대기 중';
+      $card.classList.remove('speaking');
+      $num.classList.remove('speaking');
+      $fill.classList.remove('speak-mode');
+    } else {
+      $txt.textContent = '대기 중';
+      $time.textContent = '';
+      $fill.style.width = '0';
+      $card.classList.remove('speaking');
+      $num.classList.remove('speaking');
+      $fill.classList.remove('speak-mode');
+    }
+  }
+
+  function startProgress(duration, onDone) {
+    countdownStart = performance.now();
+    countdownDuration = duration;
+
+    function tick(now) {
+      if (!isPlaying) return;
+      const elapsed = now - countdownStart;
+      const pct = Math.min(elapsed / countdownDuration, 1);
+      $fill.style.width = (pct * 100) + '%';
+      const remaining = Math.max((countdownDuration - elapsed) / 1000, 0);
+      $time.textContent = remaining.toFixed(1) + 's';
+
+      if (pct >= 1) {
+        $fill.style.width = '0';
+        $time.textContent = '';
+        onDone();
+      } else {
+        rafId = requestAnimationFrame(tick);
+      }
+    }
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function speakNumber(num, settings) {
+    synth.cancel();
+    isSpeaking = true;
+
+    setStatus('speaking');
+    $fill.style.width = '100%'; // show full bar while speaking
+
+    const utt = new SpeechSynthesisUtterance(num.toString());
+    utt.lang = 'en-US';
+    utt.rate = settings.rate;
+
+    utt.onend = () => {
+      if (!isPlaying) return;
+      isSpeaking = false;
+      setStatus('waiting');
+      $fill.style.width = '0';
+      startProgress(settings.interval, playNext);
+    };
+
+    utt.onerror = () => {
+      if (!isPlaying) return;
+      isSpeaking = false;
+      setStatus('waiting');
+      startProgress(settings.interval, playNext);
+    };
+
+    synth.speak(utt);
+  }
+
+  function playNext() {
+    if (!isPlaying) return;
+    const s = getSettings();
+    const range = s.max - s.min;
+    if (range < 0) { stop(); return; }
+
+    currentNum = Math.floor(Math.random() * (range + 1)) + s.min;
+    playCount++;
+    $pill.textContent = playCount + ' played';
+    $pill.classList.add('live');
+    $rep.disabled = false;
+
+    // Display
+    $num.textContent = currentNum;
+    if (s.veilNum) $num.classList.add('veiled');
+    else $num.classList.remove('veiled');
+
+    if (s.showWords) {
+      $word.textContent = toWords(currentNum);
+      $word.classList.remove('hidden');
+    } else {
+      $word.classList.add('hidden');
+    }
+
+    speakNumber(currentNum, s);
+  }
+
+  function repeatCurrent() {
+    if (currentNum === null) return;
+    const s = getSettings();
+
+    // Cancel any ongoing countdown
+    cancelAnimationFrame(rafId);
+    clearTimeout(countdownTimer);
+    synth.cancel();
+
+    speakNumber(currentNum, s);
+  }
+
+  function togglePlay() {
+    if (isPlaying) {
+      stop();
+    } else {
+      start();
+    }
+  }
+
+  function start() {
+    isPlaying = true;
+    $play.textContent = '■ 정지하기';
+    $play.classList.add('stop-mode');
+    playNext();
+  }
+
+  function stop() {
+    isPlaying = false;
+    isSpeaking = false;
+    cancelAnimationFrame(rafId);
+    clearTimeout(countdownTimer);
+    synth.cancel();
+    $play.innerHTML = '▶ 시작하기';
+    $play.classList.remove('stop-mode');
+    setStatus('idle');
+    $num.classList.remove('veiled', 'speaking');
+  }
+
+  // ── UI Helpers ─────────────────────────────────────────
+  function updateSlider(type) {
+    if (type === 'interval') {
+      const v = parseFloat(document.getElementById('intervalSlider').value);
+      document.getElementById('intervalVal').textContent = v.toFixed(1) + 's';
+    } else {
+      const v = parseFloat(document.getElementById('rateSlider').value);
+      document.getElementById('rateVal').textContent = v.toFixed(1) + '×';
+    }
+  }
+
+  function updateOptions() {
+    if (currentNum === null) return;
+    const s = getSettings();
+
+    if (s.veilNum) $num.classList.add('veiled');
+    else $num.classList.remove('veiled');
+
+    if (s.showWords) {
+      $word.textContent = toWords(currentNum);
+      $word.classList.remove('hidden');
+    } else {
+      $word.classList.add('hidden');
+    }
+  }
+
+  // ── Theme ──────────────────────────────────────────────
+  const themeBtn = document.getElementById('themeBtn');
+  const themes = ['auto', 'dark', 'light'];
+  const themeIcons = { auto: '🌙', dark: '🌑', light: '☀️' };
+
+  function toggleTheme() {
+    const idx = (themes.indexOf(currentTheme) + 1) % themes.length;
+    currentTheme = themes[idx];
+    applyTheme();
+  }
+
+  function applyTheme() {
+    const root = document.documentElement;
+    if (currentTheme === 'dark') root.setAttribute('data-theme', 'dark');
+    else if (currentTheme === 'light') root.setAttribute('data-theme', 'light');
+    else root.removeAttribute('data-theme');
+    themeBtn.textContent = themeIcons[currentTheme];
+    try { localStorage.setItem('nlt-theme', currentTheme); } catch (_) {}
+  }
+
+  // Restore theme
+  try {
+    const saved = localStorage.getItem('nlt-theme');
+    if (saved && themes.includes(saved)) { currentTheme = saved; applyTheme(); }
+  } catch (_) {}
+</script>
+</body>
+</html>
