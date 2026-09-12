@@ -73,6 +73,8 @@
       justify-content: center;
       padding-inline: 16px;
       padding-block: 24px;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
     .app {
@@ -299,7 +301,23 @@
     input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
     input[type="number"]:focus { outline: none; border-color: var(--accent); }
 
-    .slider-row { display: flex; align-items: center; gap: 10px; }
+    .slider-row { display: flex; align-items: center; gap: 6px; }
+    .adj-btn {
+      width: 26px; height: 26px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--sub);
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      line-height: 1;
+      transition: background 0.12s, color 0.12s, transform 0.08s;
+    }
+    .adj-btn:hover { background: var(--surface3); color: var(--text); }
+    .adj-btn:active { transform: scale(0.88); }
     input[type="range"] {
       flex: 1;
       -webkit-appearance: none;
@@ -435,8 +453,10 @@
     <div class="field">
       <div class="field-label">대기 시간</div>
       <div class="slider-row">
+        <button class="adj-btn" onclick="adjustSlider('intervalSlider',-0.1,'interval')">−</button>
         <input type="range" id="intervalSlider" min="0" max="8" step="0.1" value="2"
                oninput="updateSlider('interval')">
+        <button class="adj-btn" onclick="adjustSlider('intervalSlider', 0.1,'interval')">+</button>
         <span class="slider-val" id="intervalVal">2.0s</span>
       </div>
     </div>
@@ -444,8 +464,10 @@
     <div class="field">
       <div class="field-label">말하기 속도</div>
       <div class="slider-row">
+        <button class="adj-btn" onclick="adjustSlider('rateSlider',-0.1,'rate')">−</button>
         <input type="range" id="rateSlider" min="0.5" max="1.5" step="0.1" value="1.0"
                oninput="updateSlider('rate')">
+        <button class="adj-btn" onclick="adjustSlider('rateSlider', 0.1,'rate')">+</button>
         <span class="slider-val" id="rateVal">1.0×</span>
       </div>
     </div>
@@ -453,8 +475,10 @@
     <div class="field">
       <div class="field-label">훈련 시간</div>
       <div class="slider-row">
+        <button class="adj-btn" onclick="adjustSlider('durationSlider',-5,'duration')">−</button>
         <input type="range" id="durationSlider" min="0" max="30" step="5" value="0"
                oninput="updateSlider('duration')">
+        <button class="adj-btn" onclick="adjustSlider('durationSlider', 5,'duration')">+</button>
         <span class="slider-val" id="durationVal">무제한</span>
       </div>
     </div>
@@ -738,6 +762,15 @@
   }
 
   // ── UI helpers ─────────────────────────────────────────
+  function adjustSlider(id, delta, type) {
+    const el = document.getElementById(id);
+    const places = (delta.toString().split('.')[1] || '').length;
+    let val = parseFloat((parseFloat(el.value) + delta).toFixed(places));
+    val = Math.max(parseFloat(el.min), Math.min(parseFloat(el.max), val));
+    el.value = val;
+    updateSlider(type);
+  }
+
   function updateSlider(type) {
     if (type === 'interval') {
       const v = parseFloat(document.getElementById('intervalSlider').value);
