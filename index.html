@@ -459,7 +459,7 @@
         </div>
         <div class="sub-field">
           <span class="sub-label">최댓값</span>
-          <input type="number" id="maxNum" value="150" min="1">
+          <input type="number" id="maxNum" value="100" min="1">
         </div>
       </div>
     </div>
@@ -470,10 +470,10 @@
       <div class="field-label">대기 시간</div>
       <div class="slider-row">
         <button class="adj-btn" onclick="adjustSlider('intervalSlider',-0.1,'interval')">−</button>
-        <input type="range" id="intervalSlider" min="0" max="8" step="0.1" value="2"
+        <input type="range" id="intervalSlider" min="0" max="8" step="0.1" value="0.5"
                oninput="updateSlider('interval')">
         <button class="adj-btn" onclick="adjustSlider('intervalSlider', 0.1,'interval')">+</button>
-        <span class="slider-val" id="intervalVal">2.0s</span>
+        <span class="slider-val" id="intervalVal">0.5s</span>
       </div>
     </div>
 
@@ -492,10 +492,10 @@
       <div class="field-label">훈련 시간</div>
       <div class="slider-row">
         <button class="adj-btn" onclick="adjustSlider('durationSlider',-5,'duration')">−</button>
-        <input type="range" id="durationSlider" min="0" max="30" step="5" value="0"
+        <input type="range" id="durationSlider" min="0" max="30" step="5" value="5"
                oninput="updateSlider('duration')">
         <button class="adj-btn" onclick="adjustSlider('durationSlider', 5,'duration')">+</button>
-        <span class="slider-val" id="durationVal">무제한</span>
+        <span class="slider-val" id="durationVal">5분</span>
       </div>
     </div>
 
@@ -665,7 +665,7 @@
 
   // ── Countdown (arc animation) ──────────────────────────
   function startCountdown(duration, onDone) {
-    if (duration <= 0) { onDone(); return; }
+    if (duration <= 0) { setTimeout(onDone, 0); return; }
 
     // Arc already visible; animate from full (0) to empty (1)
     arcSet(0);
