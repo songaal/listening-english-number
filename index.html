@@ -188,22 +188,36 @@
     }
     .word-line.hidden { opacity: 0; }
 
-    /* Remaining time display */
-    .remaining-time {
-      font-family: var(--font-mono);
-      font-size: 24px;
-      font-weight: 700;
-      color: var(--sub);
+    /* Training time bar */
+    .training-wrap {
       margin-top: 18px;
-      letter-spacing: 0.06em;
-      font-variant-numeric: tabular-nums;
       position: relative;
       z-index: 1;
       display: none;
-      transition: color 0.4s;
     }
-    .remaining-time.urgent { color: var(--urgent); }
-    .remaining-time.done { color: var(--accent); font-size: 16px; letter-spacing: 0.04em; }
+    .training-text {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--sub);
+      text-align: center;
+      margin-bottom: 7px;
+      letter-spacing: 0.05em;
+      font-variant-numeric: tabular-nums;
+    }
+    .training-track {
+      height: 3px;
+      background: var(--surface3);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .training-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      width: 100%;
+      transition: width 0.95s linear;
+    }
+    .training-fill.urgent { background: var(--urgent); }
 
     /* ── Buttons ── */
     .btn-row {
@@ -381,7 +395,12 @@
 
     <div class="number-wrap" id="numDisplay">--</div>
     <div class="word-line hidden" id="wordDisplay"></div>
-    <div class="remaining-time" id="remainingTime"></div>
+    <div class="training-wrap" id="trainingWrap">
+      <div class="training-text" id="trainingText"></div>
+      <div class="training-track">
+        <div class="training-fill" id="trainingFill"></div>
+      </div>
+    </div>
   </div>
 
   <!-- Buttons -->
@@ -473,15 +492,16 @@
   const CIRC = 2 * Math.PI * 11; // r=11 → ≈ 69.115
 
   // ── State ──────────────────────────────────────────────
-  let isPlaying   = false;
-  let isSpeaking  = false;
-  let currentNum  = null;
-  let playCount   = 0;
-  let rafId       = null;
-  let trainingEnd = 0;       // Date.now() target; 0 = unlimited
-  let trainTick   = null;    // setInterval id for MM:SS display
-  let wakeLock    = null;
-  let currentTheme = 'auto';
+  let isPlaying      = false;
+  let isSpeaking     = false;
+  let currentNum     = null;
+  let playCount      = 0;
+  let rafId          = null;
+  let trainingEnd    = 0;   // Date.now() target; 0 = unlimited
+  let totalTrainingMs = 0;
+  let trainTick      = null;
+  let wakeLock       = null;
+  let currentTheme   = 'auto';
 
   const synth = window.speechSynthesis;
 
@@ -489,24 +509,31 @@
   setInterval(() => { if (synth.speaking) { synth.pause(); synth.resume(); } }, 10000);
 
   // ── DOM refs ───────────────────────────────────────────
-  const $card      = document.getElementById('displayCard');
-  const $num       = document.getElementById('numDisplay');
-  const $word      = document.getElementById('wordDisplay');
-  const $remaining = document.getElementById('remainingTime');
-  const $play      = document.getElementById('playBtn');
-  const $rep       = document.getElementById('repeatBtn');
-  const $pill      = document.getElementById('countPill');
-  const $arcRing   = document.getElementById('arcRing');
-  const $arcPath   = document.getElementById('arcPath');
+  const $card       = document.getElementById('displayCard');
+  const $num        = document.getElementById('numDisplay');
+  const $word       = document.getElementById('wordDisplay');
+  const $play       = document.getElementById('playBtn');
+  const $rep        = document.getElementById('repeatBtn');
+  const $pill       = document.getElementById('countPill');
+  const $arcRing    = document.getElementById('arcRing');
+  const $arcPath    = document.getElementById('arcPath');
+  const $trainWrap  = document.getElementById('trainingWrap');
+  const $trainText  = document.getElementById('trainingText');
+  const $trainFill  = document.getElementById('trainingFill');
 
   // ── Arc helpers ────────────────────────────────────────
-  function arcShow(visible) {
-    $arcRing.style.display = visible ? 'block' : 'none';
-  }
+  // Direction: HEAD stays just before 12 o'clock (counterclockwise side),
+  // START of arc sweeps clockwise away from 12 as fraction grows.
+  // So the arc shrinks by its 12 o'clock side, remaining arc is at far clockwise end.
   function arcSet(fraction) {
-    // fraction 0→full, 1→empty; arc starts at 12 o'clock, shrinks from tail
-    const len = Math.max(0, CIRC * (1 - fraction));
+    const f   = Math.max(0, Math.min(1, fraction));
+    const len = CIRC * (1 - f);
+    // Rotate the circle so the arc's remaining portion ends at 12 o'clock.
+    // At f=0: rot=-90, full 360° starts at 12 (full bright ring).
+    // At f>0: start sweeps clockwise; the end is always pinned at 12.
+    const rot = -90 + f * 360;
     $arcPath.setAttribute('stroke-dasharray', `${len} ${CIRC}`);
+    $arcPath.setAttribute('transform', `rotate(${rot} 14 14)`);
   }
 
   // ── Wake Lock ──────────────────────────────────────────
@@ -525,13 +552,23 @@
   });
 
   // ── Training timer ─────────────────────────────────────
+  function fmtMs(ms) {
+    const s = Math.max(0, Math.ceil(ms / 1000));
+    return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+  }
+
   function startTraining() {
     const mins = parseInt(document.getElementById('durationSlider').value);
-    if (mins === 0) { trainingEnd = 0; $remaining.style.display = 'none'; return; }
-    trainingEnd = Date.now() + mins * 60 * 1000;
-    $remaining.className = 'remaining-time';
-    $remaining.style.display = 'block';
-    renderRemaining();
+    if (mins === 0) { trainingEnd = 0; totalTrainingMs = 0; $trainWrap.style.display = 'none'; return; }
+    totalTrainingMs = mins * 60 * 1000;
+    trainingEnd = Date.now() + totalTrainingMs;
+    $trainFill.style.transition = 'none';
+    $trainFill.style.width = '100%';
+    $trainFill.classList.remove('urgent');
+    $trainText.textContent = fmtMs(totalTrainingMs) + ' / ' + fmtMs(totalTrainingMs);
+    $trainWrap.style.display = 'block';
+    // Re-enable transition after first paint
+    requestAnimationFrame(() => { $trainFill.style.transition = 'width 0.95s linear'; });
     trainTick = setInterval(renderRemaining, 1000);
   }
 
@@ -539,21 +576,22 @@
     if (trainingEnd === 0) return;
     const ms = trainingEnd - Date.now();
     if (ms <= 0) {
-      $remaining.textContent = '00:00';
+      $trainText.textContent = '00:00 / ' + fmtMs(totalTrainingMs);
+      $trainFill.style.width = '0%';
       stop(true);
       return;
     }
-    const totalSec = Math.ceil(ms / 1000);
-    const m = Math.floor(totalSec / 60);
-    const s = totalSec % 60;
-    $remaining.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
-    $remaining.classList.toggle('urgent', ms < 60000);
+    $trainText.textContent = fmtMs(ms) + ' / ' + fmtMs(totalTrainingMs);
+    $trainFill.style.width = (ms / totalTrainingMs * 100) + '%';
+    $trainFill.classList.toggle('urgent', ms < 60000);
   }
 
-  function stopTraining() {
+  function stopTraining(keepDisplay = false) {
     clearInterval(trainTick);
-    trainTick  = null;
+    trainTick = null;
     trainingEnd = 0;
+    totalTrainingMs = 0;
+    if (!keepDisplay) $trainWrap.style.display = 'none';
   }
 
   // ── Number → words ─────────────────────────────────────
@@ -588,16 +626,15 @@
   function startCountdown(duration, onDone) {
     if (duration <= 0) { onDone(); return; }
 
-    arcSet(0);   // start full
-    arcShow(true);
-
+    // Arc already visible; animate from full (0) to empty (1)
+    arcSet(0);
     const start = performance.now();
 
     function tick(now) {
-      if (!isPlaying) { arcShow(false); return; }
+      if (!isPlaying) return;
       const f = Math.min((now - start) / duration, 1);
       arcSet(f);
-      if (f >= 1) { arcShow(false); onDone(); }
+      if (f >= 1) { onDone(); }          // arc resets to full in next speakNumber call
       else        { rafId = requestAnimationFrame(tick); }
     }
     rafId = requestAnimationFrame(tick);
@@ -607,7 +644,7 @@
   function speakNumber(num, settings) {
     synth.cancel();
     isSpeaking = true;
-    arcShow(false);
+    arcSet(0);   // full bright ring while speaking
     $card.classList.add('speaking');
     $num.classList.add('speaking');
 
@@ -660,7 +697,6 @@
   function repeatCurrent() {
     if (currentNum === null) return;
     cancelAnimationFrame(rafId);
-    arcShow(false);
     synth.cancel();
     speakNumber(currentNum, getSettings());
   }
@@ -671,6 +707,8 @@
     isPlaying = true;
     $play.textContent = '■ 정지하기';
     $play.classList.add('stop-mode');
+    $arcRing.style.display = 'block';
+    arcSet(0);
     requestWakeLock();
     startTraining();
     playNext();
@@ -681,19 +719,20 @@
     isSpeaking = false;
     cancelAnimationFrame(rafId);
     synth.cancel();
-    arcShow(false);
-    stopTraining();
-    releaseWakeLock();
+    $arcRing.style.display = 'none';
     $card.classList.remove('speaking');
     $num.classList.remove('veiled', 'speaking');
     $play.innerHTML = '▶ 시작하기';
     $play.classList.remove('stop-mode');
+    releaseWakeLock();
 
     if (completed) {
-      $remaining.className = 'remaining-time done';
-      $remaining.style.display = 'block';
-      $remaining.textContent = '훈련 완료';
-      setTimeout(() => { $remaining.style.display = 'none'; }, 3000);
+      stopTraining(true);
+      $trainText.textContent = '훈련 완료';
+      $trainFill.style.width = '0%';
+      setTimeout(() => { $trainWrap.style.display = 'none'; }, 3000);
+    } else {
+      stopTraining();
     }
   }
 
