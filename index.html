@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Number Listening</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap">
@@ -22,6 +22,7 @@
       --speak:     #A78BFA;
       --speak-bg:  rgba(167,139,250,0.10);
       --speak-br:  rgba(167,139,250,0.22);
+      --urgent:    #F87171;
       --r: 13px;
       --font-mono: 'JetBrains Mono', 'Courier New', monospace;
       --font-ui:   'Inter', system-ui, sans-serif;
@@ -45,36 +46,18 @@
       }
     }
     :root[data-theme="dark"] {
-      --bg:        #0B0D16;
-      --surface:   #13161F;
-      --surface2:  #191D2A;
-      --surface3:  #1E2233;
-      --border:    rgba(255,255,255,0.07);
-      --text:      #D8E0F0;
-      --sub:       #758094;
-      --muted:     #364158;
-      --accent:    #5B9BFF;
-      --accent-bg: rgba(91,155,255,0.10);
-      --accent-br: rgba(91,155,255,0.22);
-      --speak:     #A78BFA;
-      --speak-bg:  rgba(167,139,250,0.10);
-      --speak-br:  rgba(167,139,250,0.22);
+      --bg:        #0B0D16; --surface:   #13161F; --surface2:  #191D2A;
+      --surface3:  #1E2233; --border:    rgba(255,255,255,0.07); --text:      #D8E0F0;
+      --sub:       #758094; --muted:     #364158; --accent:    #5B9BFF;
+      --accent-bg: rgba(91,155,255,0.10); --accent-br: rgba(91,155,255,0.22);
+      --speak:     #A78BFA; --speak-bg:  rgba(167,139,250,0.10); --speak-br:  rgba(167,139,250,0.22);
     }
     :root[data-theme="light"] {
-      --bg:        #EEF1F9;
-      --surface:   #FFFFFF;
-      --surface2:  #F2F5FC;
-      --surface3:  #E8EDF7;
-      --border:    rgba(0,0,0,0.07);
-      --text:      #111827;
-      --sub:       #4D5A78;
-      --muted:     #B0BAD0;
-      --accent:    #2660E8;
-      --accent-bg: rgba(38,96,232,0.08);
-      --accent-br: rgba(38,96,232,0.22);
-      --speak:     #7C3AED;
-      --speak-bg:  rgba(124,58,237,0.08);
-      --speak-br:  rgba(124,58,237,0.22);
+      --bg:        #EEF1F9; --surface:   #FFFFFF; --surface2:  #F2F5FC;
+      --surface3:  #E8EDF7; --border:    rgba(0,0,0,0.07); --text:      #111827;
+      --sub:       #4D5A78; --muted:     #B0BAD0; --accent:    #2660E8;
+      --accent-bg: rgba(38,96,232,0.08); --accent-br: rgba(38,96,232,0.22);
+      --speak:     #7C3AED; --speak-bg:  rgba(124,58,237,0.08); --speak-br:  rgba(124,58,237,0.22);
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -100,7 +83,7 @@
       gap: 10px;
     }
 
-    /* Header */
+    /* ── Header ── */
     .header {
       display: flex;
       align-items: center;
@@ -114,22 +97,15 @@
       text-transform: uppercase;
       color: var(--sub);
     }
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
+    .header-right { display: flex; align-items: center; gap: 8px; }
     .theme-btn {
-      width: 28px;
-      height: 28px;
+      width: 28px; height: 28px;
       border-radius: 7px;
       border: 1px solid var(--border);
       background: var(--surface);
       color: var(--sub);
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       font-size: 14px;
       transition: background 0.15s, color 0.15s;
     }
@@ -147,7 +123,7 @@
     }
     .count-pill.live { color: var(--accent); border-color: var(--accent-br); }
 
-    /* Display card */
+    /* ── Display card ── */
     .display-card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -161,14 +137,20 @@
     .display-card.speaking { border-color: var(--speak-br); }
 
     .glow {
-      position: absolute;
-      inset: 0;
+      position: absolute; inset: 0;
       pointer-events: none;
       background: radial-gradient(ellipse 60% 50% at 50% 0%, var(--speak-bg), transparent);
       opacity: 0;
       transition: opacity 0.5s;
     }
     .display-card.speaking .glow { opacity: 1; }
+
+    /* Circular arc indicator */
+    .arc-ring {
+      position: absolute;
+      top: 14px; right: 14px;
+      display: none;
+    }
 
     .number-wrap {
       font-family: var(--font-mono);
@@ -206,66 +188,24 @@
     }
     .word-line.hidden { opacity: 0; }
 
-    /* Status + progress */
-    .status-bar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 20px;
-      position: relative;
-      z-index: 1;
-    }
-    .dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--muted);
-      flex-shrink: 0;
-      transition: background 0.3s;
-    }
-    .dot.speaking {
-      background: var(--speak);
-      animation: blink 1s ease-in-out infinite;
-    }
-    .dot.waiting { background: var(--accent); animation: none; }
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.35; }
-    }
-    .status-text {
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--sub);
-      flex: 1;
-    }
-    .time-left {
+    /* Remaining time display */
+    .remaining-time {
       font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--muted);
-      letter-spacing: 0.03em;
-    }
-
-    .progress-track {
-      height: 2px;
-      background: var(--surface3);
-      border-radius: 2px;
-      overflow: hidden;
-      margin-top: 10px;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--sub);
+      margin-top: 18px;
+      letter-spacing: 0.06em;
+      font-variant-numeric: tabular-nums;
       position: relative;
       z-index: 1;
+      display: none;
+      transition: color 0.4s;
     }
-    .progress-fill {
-      height: 100%;
-      width: 0;
-      background: var(--accent);
-      border-radius: 2px;
-      transition: background 0.3s;
-    }
-    .progress-fill.speak-mode { background: var(--speak); }
+    .remaining-time.urgent { color: var(--urgent); }
+    .remaining-time.done { color: var(--accent); font-size: 16px; letter-spacing: 0.04em; }
 
-    /* Buttons */
+    /* ── Buttons ── */
     .btn-row {
       display: grid;
       grid-template-columns: 1fr 2fr;
@@ -281,9 +221,7 @@
       background: var(--surface);
       color: var(--sub);
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       gap: 5px;
       transition: background 0.15s, color 0.15s, transform 0.1s;
     }
@@ -308,7 +246,7 @@
       color: var(--speak);
     }
 
-    /* Settings */
+    /* ── Settings ── */
     .settings {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -318,12 +256,7 @@
       flex-direction: column;
       gap: 18px;
     }
-
-    .field {
-      display: flex;
-      flex-direction: column;
-      gap: 7px;
-    }
+    .field { display: flex; flex-direction: column; gap: 7px; }
     .field-label {
       font-size: 11px;
       font-weight: 600;
@@ -331,11 +264,7 @@
       text-transform: uppercase;
       color: var(--muted);
     }
-    .range-pair {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
+    .range-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .sub-field { display: flex; flex-direction: column; gap: 4px; }
     .sub-label { font-size: 11px; color: var(--muted); }
 
@@ -355,11 +284,7 @@
     input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
     input[type="number"]:focus { outline: none; border-color: var(--accent); }
 
-    .slider-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
+    .slider-row { display: flex; align-items: center; gap: 10px; }
     input[type="range"] {
       flex: 1;
       -webkit-appearance: none;
@@ -388,20 +313,16 @@
       font-family: var(--font-mono);
       font-size: 12px;
       color: var(--sub);
-      min-width: 34px;
+      min-width: 44px;
       text-align: right;
     }
 
-    /* Toggle */
-    .toggle-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
+    /* ── Toggle ── */
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; }
     .toggle-label { font-size: 13px; color: var(--sub); font-weight: 500; }
     .toggle {
-      position: relative; width: 36px; height: 20px; cursor: pointer;
-      display: block; flex-shrink: 0;
+      position: relative; width: 36px; height: 20px;
+      cursor: pointer; display: block; flex-shrink: 0;
     }
     .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
     .t-track {
@@ -412,8 +333,7 @@
       transition: background 0.2s, border-color 0.2s;
     }
     .t-thumb {
-      position: absolute;
-      top: 3px; left: 3px;
+      position: absolute; top: 3px; left: 3px;
       width: 14px; height: 14px;
       border-radius: 50%;
       background: var(--muted);
@@ -446,17 +366,22 @@
   <!-- Display -->
   <div class="display-card" id="displayCard">
     <div class="glow"></div>
+
+    <!-- Circular arc indicator (top-right, waiting phase only) -->
+    <svg class="arc-ring" id="arcRing" width="28" height="28" viewBox="0 0 28 28">
+      <!-- Ghost trace: faint full circle showing where arc was -->
+      <circle class="arc-ghost" cx="14" cy="14" r="11"
+        fill="none" stroke-width="2"/>
+      <!-- Active arc: starts full, shrinks clockwise as wait time passes -->
+      <circle class="arc-active" cx="14" cy="14" r="11"
+        fill="none" stroke-width="2" stroke-linecap="round"
+        transform="rotate(-90 14 14)"
+        id="arcPath"/>
+    </svg>
+
     <div class="number-wrap" id="numDisplay">--</div>
     <div class="word-line hidden" id="wordDisplay"></div>
-
-    <div class="status-bar">
-      <div class="dot" id="statusDot"></div>
-      <span class="status-text" id="statusText">대기 중</span>
-      <span class="time-left" id="timeLeft"></span>
-    </div>
-    <div class="progress-track">
-      <div class="progress-fill" id="progressFill"></div>
-    </div>
+    <div class="remaining-time" id="remainingTime"></div>
   </div>
 
   <!-- Buttons -->
@@ -490,7 +415,7 @@
     <div class="field">
       <div class="field-label">대기 시간</div>
       <div class="slider-row">
-        <input type="range" id="intervalSlider" min="0.5" max="8" step="0.5" value="2"
+        <input type="range" id="intervalSlider" min="0" max="8" step="0.1" value="2"
                oninput="updateSlider('interval')">
         <span class="slider-val" id="intervalVal">2.0s</span>
       </div>
@@ -502,6 +427,15 @@
         <input type="range" id="rateSlider" min="0.5" max="1.5" step="0.1" value="1.0"
                oninput="updateSlider('rate')">
         <span class="slider-val" id="rateVal">1.0×</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="field-label">훈련 시간</div>
+      <div class="slider-row">
+        <input type="range" id="durationSlider" min="0" max="30" step="5" value="0"
+               oninput="updateSlider('duration')">
+        <span class="slider-val" id="durationVal">무제한</span>
       </div>
     </div>
 
@@ -528,162 +462,190 @@
 
 </div>
 
+<style>
+  /* Arc colors via CSS so they pick up theme tokens */
+  .arc-ghost { stroke: var(--accent); opacity: 0.13; }
+  .arc-active { stroke: var(--accent); }
+</style>
+
 <script>
+  // ── Constants ──────────────────────────────────────────
+  const CIRC = 2 * Math.PI * 11; // r=11 → ≈ 69.115
+
   // ── State ──────────────────────────────────────────────
-  let isPlaying = false;
-  let isSpeaking = false;
-  let currentNum = null;
-  let playCount = 0;
-  let countdownTimer = null;
-  let rafId = null;
-  let countdownStart = 0;
-  let countdownDuration = 0;
-  let currentTheme = 'auto'; // auto | dark | light
+  let isPlaying   = false;
+  let isSpeaking  = false;
+  let currentNum  = null;
+  let playCount   = 0;
+  let rafId       = null;
+  let trainingEnd = 0;       // Date.now() target; 0 = unlimited
+  let trainTick   = null;    // setInterval id for MM:SS display
+  let wakeLock    = null;
+  let currentTheme = 'auto';
 
   const synth = window.speechSynthesis;
 
-  // Chrome speechSynthesis bug: stops after ~15 utterances
-  // Keep it alive with a periodic resume
-  setInterval(() => {
-    if (synth.speaking) { synth.pause(); synth.resume(); }
-  }, 10000);
+  // Chrome: speechSynthesis silently stops after ~15s of idle; keep alive
+  setInterval(() => { if (synth.speaking) { synth.pause(); synth.resume(); } }, 10000);
 
-  // ── Number → Words ─────────────────────────────────────
-  const ONES = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven',
-                'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen',
-                'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
-  const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty',
-                'sixty', 'seventy', 'eighty', 'ninety'];
+  // ── DOM refs ───────────────────────────────────────────
+  const $card      = document.getElementById('displayCard');
+  const $num       = document.getElementById('numDisplay');
+  const $word      = document.getElementById('wordDisplay');
+  const $remaining = document.getElementById('remainingTime');
+  const $play      = document.getElementById('playBtn');
+  const $rep       = document.getElementById('repeatBtn');
+  const $pill      = document.getElementById('countPill');
+  const $arcRing   = document.getElementById('arcRing');
+  const $arcPath   = document.getElementById('arcPath');
+
+  // ── Arc helpers ────────────────────────────────────────
+  function arcShow(visible) {
+    $arcRing.style.display = visible ? 'block' : 'none';
+  }
+  function arcSet(fraction) {
+    // fraction 0→full, 1→empty; arc starts at 12 o'clock, shrinks from tail
+    const len = Math.max(0, CIRC * (1 - fraction));
+    $arcPath.setAttribute('stroke-dasharray', `${len} ${CIRC}`);
+  }
+
+  // ── Wake Lock ──────────────────────────────────────────
+  async function requestWakeLock() {
+    if (!('wakeLock' in navigator)) return;
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } catch (_) {}
+  }
+  async function releaseWakeLock() {
+    if (wakeLock) { try { await wakeLock.release(); } catch (_) {} wakeLock = null; }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && isPlaying) requestWakeLock();
+  });
+
+  // ── Training timer ─────────────────────────────────────
+  function startTraining() {
+    const mins = parseInt(document.getElementById('durationSlider').value);
+    if (mins === 0) { trainingEnd = 0; $remaining.style.display = 'none'; return; }
+    trainingEnd = Date.now() + mins * 60 * 1000;
+    $remaining.className = 'remaining-time';
+    $remaining.style.display = 'block';
+    renderRemaining();
+    trainTick = setInterval(renderRemaining, 1000);
+  }
+
+  function renderRemaining() {
+    if (trainingEnd === 0) return;
+    const ms = trainingEnd - Date.now();
+    if (ms <= 0) {
+      $remaining.textContent = '00:00';
+      stop(true);
+      return;
+    }
+    const totalSec = Math.ceil(ms / 1000);
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    $remaining.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    $remaining.classList.toggle('urgent', ms < 60000);
+  }
+
+  function stopTraining() {
+    clearInterval(trainTick);
+    trainTick  = null;
+    trainingEnd = 0;
+  }
+
+  // ── Number → words ─────────────────────────────────────
+  const ONES = ['','one','two','three','four','five','six','seven','eight','nine',
+                'ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen',
+                'seventeen','eighteen','nineteen'];
+  const TENS = ['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
 
   function toWords(n) {
     if (n === 0) return 'zero';
     if (n < 0) return 'negative ' + toWords(-n);
     if (n < 20) return ONES[n];
-    if (n < 100) return TENS[Math.floor(n / 10)] + (n % 10 ? '-' + ONES[n % 10] : '');
-    if (n < 1000) {
-      const r = n % 100;
-      return ONES[Math.floor(n / 100)] + ' hundred' + (r ? ' ' + toWords(r) : '');
-    }
-    if (n < 1000000) {
-      const t = Math.floor(n / 1000), r = n % 1000;
-      return toWords(t) + ' thousand' + (r ? ' ' + toWords(r) : '');
-    }
+    if (n < 100) return TENS[Math.floor(n/10)] + (n%10 ? '-' + ONES[n%10] : '');
+    if (n < 1000) { const r=n%100; return ONES[Math.floor(n/100)]+' hundred'+(r?' '+toWords(r):''); }
+    if (n < 1000000) { const t=Math.floor(n/1000),r=n%1000; return toWords(t)+' thousand'+(r?' '+toWords(r):''); }
     return n.toString();
   }
 
-  // ── DOM refs ───────────────────────────────────────────
-  const $card = document.getElementById('displayCard');
-  const $num  = document.getElementById('numDisplay');
-  const $word = document.getElementById('wordDisplay');
-  const $dot  = document.getElementById('statusDot');
-  const $txt  = document.getElementById('statusText');
-  const $time = document.getElementById('timeLeft');
-  const $fill = document.getElementById('progressFill');
-  const $play = document.getElementById('playBtn');
-  const $rep  = document.getElementById('repeatBtn');
-  const $pill = document.getElementById('countPill');
-
-  // ── Core logic ─────────────────────────────────────────
+  // ── Settings ───────────────────────────────────────────
   function getSettings() {
-    const min      = parseInt(document.getElementById('minNum').value) || 1;
-    const max      = parseInt(document.getElementById('maxNum').value) || 100;
-    const interval = parseFloat(document.getElementById('intervalSlider').value) * 1000 || 2000;
-    const rate     = parseFloat(document.getElementById('rateSlider').value) || 1.0;
-    const showWords = document.getElementById('showWords').checked;
-    const veilNum   = document.getElementById('veilNum').checked;
-    return { min, max, interval, rate, showWords, veilNum };
+    return {
+      min:       parseInt(document.getElementById('minNum').value)      || 0,
+      max:       parseInt(document.getElementById('maxNum').value)      || 100,
+      interval:  parseFloat(document.getElementById('intervalSlider').value) * 1000,
+      rate:      parseFloat(document.getElementById('rateSlider').value) || 1.0,
+      showWords: document.getElementById('showWords').checked,
+      veilNum:   document.getElementById('veilNum').checked,
+    };
   }
 
-  function setStatus(state) {
-    $dot.className = 'dot ' + state;
-    if (state === 'speaking') {
-      $txt.textContent = '발음 중';
-      $card.classList.add('speaking');
-      $num.classList.add('speaking');
-      $fill.classList.add('speak-mode');
-    } else if (state === 'waiting') {
-      $txt.textContent = '다음 대기 중';
-      $card.classList.remove('speaking');
-      $num.classList.remove('speaking');
-      $fill.classList.remove('speak-mode');
-    } else {
-      $txt.textContent = '대기 중';
-      $time.textContent = '';
-      $fill.style.width = '0';
-      $card.classList.remove('speaking');
-      $num.classList.remove('speaking');
-      $fill.classList.remove('speak-mode');
-    }
-  }
+  // ── Countdown (arc animation) ──────────────────────────
+  function startCountdown(duration, onDone) {
+    if (duration <= 0) { onDone(); return; }
 
-  function startProgress(duration, onDone) {
-    countdownStart = performance.now();
-    countdownDuration = duration;
+    arcSet(0);   // start full
+    arcShow(true);
+
+    const start = performance.now();
 
     function tick(now) {
-      if (!isPlaying) return;
-      const elapsed = now - countdownStart;
-      const pct = Math.min(elapsed / countdownDuration, 1);
-      $fill.style.width = (pct * 100) + '%';
-      const remaining = Math.max((countdownDuration - elapsed) / 1000, 0);
-      $time.textContent = remaining.toFixed(1) + 's';
-
-      if (pct >= 1) {
-        $fill.style.width = '0';
-        $time.textContent = '';
-        onDone();
-      } else {
-        rafId = requestAnimationFrame(tick);
-      }
+      if (!isPlaying) { arcShow(false); return; }
+      const f = Math.min((now - start) / duration, 1);
+      arcSet(f);
+      if (f >= 1) { arcShow(false); onDone(); }
+      else        { rafId = requestAnimationFrame(tick); }
     }
     rafId = requestAnimationFrame(tick);
   }
 
+  // ── Speech ─────────────────────────────────────────────
   function speakNumber(num, settings) {
     synth.cancel();
     isSpeaking = true;
-
-    setStatus('speaking');
-    $fill.style.width = '100%'; // show full bar while speaking
+    arcShow(false);
+    $card.classList.add('speaking');
+    $num.classList.add('speaking');
 
     const utt = new SpeechSynthesisUtterance(num.toString());
     utt.lang = 'en-US';
     utt.rate = settings.rate;
 
-    utt.onend = () => {
+    const onDone = () => {
       if (!isPlaying) return;
       isSpeaking = false;
-      setStatus('waiting');
-      $fill.style.width = '0';
-      startProgress(settings.interval, playNext);
+      $card.classList.remove('speaking');
+      $num.classList.remove('speaking');
+      startCountdown(settings.interval, playNext);
     };
-
-    utt.onerror = () => {
-      if (!isPlaying) return;
-      isSpeaking = false;
-      setStatus('waiting');
-      startProgress(settings.interval, playNext);
-    };
+    utt.onend   = onDone;
+    utt.onerror = onDone;
 
     synth.speak(utt);
   }
 
+  // ── Playback ───────────────────────────────────────────
   function playNext() {
     if (!isPlaying) return;
-    const s = getSettings();
-    const range = s.max - s.min;
-    if (range < 0) { stop(); return; }
 
-    currentNum = Math.floor(Math.random() * (range + 1)) + s.min;
+    // Check if training time has elapsed
+    if (trainingEnd > 0 && Date.now() >= trainingEnd) { stop(true); return; }
+
+    const s = getSettings();
+    if (s.max < s.min) { stop(); return; }
+
+    currentNum = Math.floor(Math.random() * (s.max - s.min + 1)) + s.min;
     playCount++;
     $pill.textContent = playCount + ' played';
     $pill.classList.add('live');
     $rep.disabled = false;
 
-    // Display
     $num.textContent = currentNum;
-    if (s.veilNum) $num.classList.add('veiled');
-    else $num.classList.remove('veiled');
+    $num.classList.toggle('veiled', s.veilNum);
 
     if (s.showWords) {
       $word.textContent = toWords(currentNum);
@@ -697,90 +659,83 @@
 
   function repeatCurrent() {
     if (currentNum === null) return;
-    const s = getSettings();
-
-    // Cancel any ongoing countdown
     cancelAnimationFrame(rafId);
-    clearTimeout(countdownTimer);
+    arcShow(false);
     synth.cancel();
-
-    speakNumber(currentNum, s);
+    speakNumber(currentNum, getSettings());
   }
 
-  function togglePlay() {
-    if (isPlaying) {
-      stop();
-    } else {
-      start();
-    }
-  }
+  function togglePlay() { isPlaying ? stop() : start(); }
 
   function start() {
     isPlaying = true;
     $play.textContent = '■ 정지하기';
     $play.classList.add('stop-mode');
+    requestWakeLock();
+    startTraining();
     playNext();
   }
 
-  function stop() {
-    isPlaying = false;
+  function stop(completed = false) {
+    isPlaying  = false;
     isSpeaking = false;
     cancelAnimationFrame(rafId);
-    clearTimeout(countdownTimer);
     synth.cancel();
+    arcShow(false);
+    stopTraining();
+    releaseWakeLock();
+    $card.classList.remove('speaking');
+    $num.classList.remove('veiled', 'speaking');
     $play.innerHTML = '▶ 시작하기';
     $play.classList.remove('stop-mode');
-    setStatus('idle');
-    $num.classList.remove('veiled', 'speaking');
+
+    if (completed) {
+      $remaining.className = 'remaining-time done';
+      $remaining.style.display = 'block';
+      $remaining.textContent = '훈련 완료';
+      setTimeout(() => { $remaining.style.display = 'none'; }, 3000);
+    }
   }
 
-  // ── UI Helpers ─────────────────────────────────────────
+  // ── UI helpers ─────────────────────────────────────────
   function updateSlider(type) {
     if (type === 'interval') {
       const v = parseFloat(document.getElementById('intervalSlider').value);
       document.getElementById('intervalVal').textContent = v.toFixed(1) + 's';
-    } else {
+    } else if (type === 'rate') {
       const v = parseFloat(document.getElementById('rateSlider').value);
       document.getElementById('rateVal').textContent = v.toFixed(1) + '×';
+    } else if (type === 'duration') {
+      const v = parseInt(document.getElementById('durationSlider').value);
+      document.getElementById('durationVal').textContent = v === 0 ? '무제한' : v + '분';
     }
   }
 
   function updateOptions() {
     if (currentNum === null) return;
     const s = getSettings();
-
-    if (s.veilNum) $num.classList.add('veiled');
-    else $num.classList.remove('veiled');
-
-    if (s.showWords) {
-      $word.textContent = toWords(currentNum);
-      $word.classList.remove('hidden');
-    } else {
-      $word.classList.add('hidden');
-    }
+    $num.classList.toggle('veiled', s.veilNum);
+    if (s.showWords) { $word.textContent = toWords(currentNum); $word.classList.remove('hidden'); }
+    else             { $word.classList.add('hidden'); }
   }
 
   // ── Theme ──────────────────────────────────────────────
-  const themeBtn = document.getElementById('themeBtn');
-  const themes = ['auto', 'dark', 'light'];
+  const $themeBtn  = document.getElementById('themeBtn');
+  const themes     = ['auto', 'dark', 'light'];
   const themeIcons = { auto: '🌙', dark: '🌑', light: '☀️' };
 
   function toggleTheme() {
-    const idx = (themes.indexOf(currentTheme) + 1) % themes.length;
-    currentTheme = themes[idx];
+    currentTheme = themes[(themes.indexOf(currentTheme) + 1) % themes.length];
     applyTheme();
   }
-
   function applyTheme() {
     const root = document.documentElement;
-    if (currentTheme === 'dark') root.setAttribute('data-theme', 'dark');
+    if      (currentTheme === 'dark')  root.setAttribute('data-theme', 'dark');
     else if (currentTheme === 'light') root.setAttribute('data-theme', 'light');
-    else root.removeAttribute('data-theme');
-    themeBtn.textContent = themeIcons[currentTheme];
+    else                               root.removeAttribute('data-theme');
+    $themeBtn.textContent = themeIcons[currentTheme];
     try { localStorage.setItem('nlt-theme', currentTheme); } catch (_) {}
   }
-
-  // Restore theme
   try {
     const saved = localStorage.getItem('nlt-theme');
     if (saved && themes.includes(saved)) { currentTheme = saved; applyTheme(); }
