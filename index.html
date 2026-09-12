@@ -241,8 +241,26 @@
     /* ── Buttons ── */
     .btn-row {
       display: grid;
-      grid-template-columns: 1fr 2fr;
+      grid-template-columns: 1fr 2fr 1fr;
       gap: 8px;
+    }
+    .btn-pause-mode {
+      background: rgba(251,191,36,0.12);
+      color: #FBBF24;
+      border-color: rgba(251,191,36,0.30);
+    }
+    .btn-pause-mode:hover:not(:disabled) {
+      background: rgba(251,191,36,0.22);
+      color: #FBBF24;
+    }
+    .btn-resume-mode {
+      background: rgba(52,211,153,0.12);
+      color: #34D399;
+      border-color: rgba(52,211,153,0.30);
+    }
+    .btn-resume-mode:hover:not(:disabled) {
+      background: rgba(52,211,153,0.22);
+      color: #34D399;
     }
     .btn {
       font-family: var(--font-ui);
@@ -446,6 +464,9 @@
     <button class="btn btn-play" id="playBtn" onclick="togglePlay()">
       ▶ 시작하기
     </button>
+    <button class="btn" id="pauseBtn" onclick="togglePause()" disabled>
+      ⏸ Pause
+    </button>
   </div>
 
   <!-- Settings -->
@@ -534,6 +555,7 @@
 
   // ── State ──────────────────────────────────────────────
   let isPlaying      = false;
+  let isPaused       = false;
   let isSpeaking     = false;
   let currentNum     = null;
   let playCount      = 0;
@@ -544,10 +566,17 @@
   let wakeLock       = null;
   let currentTheme   = 'auto';
 
+  // Countdown pause/resume state
+  let cdDuration_  = 0;    // total countdown duration (ms)
+  let cdElapsed_   = 0;    // ms already elapsed before current RAF segment
+  let cdStart_     = 0;    // performance.now() at start of current RAF segment
+  let cdOnDone_    = null; // callback when countdown completes
+  let pauseWallMs  = 0;    // Date.now() when pause started (for training timer)
+
   const synth = window.speechSynthesis;
 
   // Chrome: speechSynthesis silently stops after ~15s of idle; keep alive
-  setInterval(() => { if (synth.speaking) { synth.pause(); synth.resume(); } }, 10000);
+  setInterval(() => { if (synth.speaking && !isPaused) { synth.pause(); synth.resume(); } }, 10000);
 
   // ── DOM refs ───────────────────────────────────────────
   const $card       = document.getElementById('displayCard');
@@ -555,6 +584,7 @@
   const $word       = document.getElementById('wordDisplay');
   const $play       = document.getElementById('playBtn');
   const $rep        = document.getElementById('repeatBtn');
+  const $pauseBtn   = document.getElementById('pauseBtn');
   const $pill       = document.getElementById('countPill');
   const $arcRing    = document.getElementById('arcRing');
   const $arcPath    = document.getElementById('arcPath');
@@ -666,19 +696,74 @@
   // ── Countdown (arc animation) ──────────────────────────
   function startCountdown(duration, onDone) {
     if (duration <= 0) { setTimeout(onDone, 0); return; }
-
-    // Arc already visible; animate from full (0) to empty (1)
+    cdDuration_ = duration;
+    cdElapsed_  = 0;
+    cdOnDone_   = onDone;
     arcSet(0);
-    const start = performance.now();
+    _cdRun();
+  }
 
-    function tick(now) {
-      if (!isPlaying) return;
-      const f = Math.min((now - start) / duration, 1);
+  function _cdRun() {
+    cdStart_ = performance.now();
+    rafId = requestAnimationFrame(function tick(now) {
+      if (!isPlaying || isPaused) return;
+      const f = Math.min((cdElapsed_ + now - cdStart_) / cdDuration_, 1);
       arcSet(f);
-      if (f >= 1) { onDone(); }          // arc resets to full in next speakNumber call
-      else        { rafId = requestAnimationFrame(tick); }
+      if (f >= 1) {
+        const cb = cdOnDone_; cdOnDone_ = null;
+        if (cb) cb();
+      } else {
+        rafId = requestAnimationFrame(tick);
+      }
+    });
+  }
+
+  // ── Pause / Resume ─────────────────────────────────────
+  function togglePause() { isPaused ? resumePlay() : pausePlay(); }
+
+  function pausePlay() {
+    if (!isPlaying || isPaused) return;
+    isPaused = true;
+    pauseWallMs = Date.now();
+    cancelAnimationFrame(rafId);
+
+    if (isSpeaking) {
+      synth.pause();
+    } else if (cdOnDone_) {
+      cdElapsed_ += performance.now() - cdStart_;
     }
-    rafId = requestAnimationFrame(tick);
+
+    // Freeze training timer
+    clearInterval(trainTick); trainTick = null;
+
+    $pauseBtn.textContent = '▶ Resume';
+    $pauseBtn.classList.remove('btn-pause-mode');
+    $pauseBtn.classList.add('btn-resume-mode');
+  }
+
+  function resumePlay() {
+    if (!isPlaying || !isPaused) return;
+    isPaused = false;
+
+    // Extend training deadline by pause duration
+    if (trainingEnd > 0) {
+      trainingEnd += Date.now() - pauseWallMs;
+      trainTick = setInterval(renderRemaining, 1000);
+      renderRemaining();
+    }
+
+    if (isSpeaking) {
+      synth.resume();
+    } else if (cdOnDone_) {
+      _cdRun();
+    }
+    // Edge case: paused in the ~0ms gap between countdown end and next speak.
+    // speakNumber() re-pauses itself in that case; synth.resume() unblocks it.
+    else { synth.resume(); }
+
+    $pauseBtn.textContent = '⏸ Pause';
+    $pauseBtn.classList.remove('btn-resume-mode');
+    $pauseBtn.classList.add('btn-pause-mode');
   }
 
   // ── Speech ─────────────────────────────────────────────
@@ -704,6 +789,9 @@
     utt.onerror = onDone;
 
     synth.speak(utt);
+    // If pause was triggered in the ~0ms gap between countdown and this speak,
+    // immediately re-pause so Resume can unblock it cleanly.
+    if (isPaused) synth.pause();
   }
 
   // ── Playback ───────────────────────────────────────────
@@ -746,8 +834,12 @@
 
   function start() {
     isPlaying = true;
+    isPaused  = false;
     $play.textContent = '■ 정지하기';
     $play.classList.add('stop-mode');
+    $pauseBtn.disabled = false;
+    $pauseBtn.textContent = '⏸ Pause';
+    $pauseBtn.className = 'btn btn-pause-mode';
     $arcRing.style.display = 'block';
     arcSet(0);
     requestWakeLock();
@@ -757,7 +849,9 @@
 
   function stop(completed = false) {
     isPlaying  = false;
+    isPaused   = false;
     isSpeaking = false;
+    cdOnDone_  = null;
     cancelAnimationFrame(rafId);
     synth.cancel();
     $arcRing.style.display = 'none';
@@ -765,6 +859,9 @@
     $num.classList.remove('veiled', 'speaking');
     $play.innerHTML = '▶ 시작하기';
     $play.classList.remove('stop-mode');
+    $pauseBtn.disabled = true;
+    $pauseBtn.textContent = '⏸ Pause';
+    $pauseBtn.className = 'btn';
     releaseWakeLock();
 
     if (completed) {
