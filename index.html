@@ -62,11 +62,20 @@
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    html {
+      overflow: hidden;
+      overscroll-behavior: none;
+      height: 100%;
+    }
+
     body {
       font-family: var(--font-ui);
       background: var(--bg);
       color: var(--text);
-      min-height: 100vh;
+      height: 100%;
+      overflow: hidden;
+      overscroll-behavior: none;
+      touch-action: pan-y;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -813,6 +822,13 @@
     const saved = localStorage.getItem('nlt-theme');
     if (saved && themes.includes(saved)) { currentTheme = saved; applyTheme(); }
   } catch (_) {}
+
+  // Block swipe-back gesture (iOS Safari edge swipe → history.back)
+  document.addEventListener('touchstart', function(e) {
+    if (e.touches[0].clientX < 24 || e.touches[0].clientX > window.innerWidth - 24) {
+      e.preventDefault();
+    }
+  }, { passive: false });
 </script>
 </body>
 </html>
